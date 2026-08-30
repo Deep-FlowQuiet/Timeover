@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Timeover">
+<link rel="manifest" href="manifest.json">
+<title>Timeover</title>
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #0f0f13;
+    --bg2:       #1a1a24;
+    --bg3:       #24243a;
+    --border:    #2e2e45;
+    --text:      #e8e8f0;
+    --text2:     #9090b0;
+    --accent:    #6c63ff;
+    --accent2:   #a78bfa;
+    --green:     #34d399;
+    --red:       #f87171;
+    --yellow:    #fbbf24;
+    --orange:    #fb923c;
+    --radius:    16px;
+    --radius-sm: 10px;
+    --safe-bot:  env(safe-area-inset-bottom, 0px);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── App Shell ── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* ── Header ── */
+  #header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 52px 20px 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  #header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  #header .date-tag {
+    font-size: 13px;
+    color: var(--text2);
+    background: var(--bg3);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* ── Pages ── */
+  #pages {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+  .page {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px 16px;
+    padding-bottom: calc(80px + var(--safe-bot));
+    display: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .page.active { display: block; }
+
+  /* ── Bottom Tab Bar ── */
+  #tabbar {
+    flex-shrink: 0;
+    display: flex;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding-bottom: var(--safe-bot);
+  }
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 0;
+    cursor: pointer;
+    gap: 3px;
+    transition: color 0.2s;
+    color: var(--text2);
+    border: none;
+    background: none;
+    font-size: 11px;
+    font-family: inherit;
+  }
+  .tab svg { width: 22px; height: 22px; }
+  .tab.active { color: var(--accent2); }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text2);
+    margin-bottom: 14px;
+  }
+
+  /* ── Timer Card ── */
+  .timer-display {
+    text-align: center;
+    padding: 10px 0 18px;
+  }
+  .timer-category {
+    font-size: 14px;
+    color: var(--accent2);
+    margin-bottom: 8px;
+    min-height: 20px;
+  }
+  .timer-clock {
+    font-size: 56px;
+    font-weight: 300;
+    letter-spacing: -2px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    margin-bottom: 24px;
+  }
+  .timer-clock.running { color: var(--green); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 50px;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.15s, transform 0.1s;
+    -webkit-user-select: none;
+  }
+  .btn:active { opacity: 0.75; transform: scale(0.97); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-danger  { background: var(--red); color: #fff; }
+  .btn-ghost   { background: var(--bg3); color: var(--text); }
+  .btn-full    { width: 100%; }
+
+  /* ── Category Grid ── */
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .cat-chip {
+    background: var(--bg3);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 4px;
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    -webkit-user-select: none;
+  }
+  .cat-chip .cat-icon { font-size: 20px; display: block; margin-bottom: 3px; }
+  .cat-chip.selected {
+    border-color: var(--accent);
+    background: rgba(108,99,255,0.15);
+    color: var(--accent2);
+  }
+
+  /* ── Today Summary ── */
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-label { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .summary-value { font-size: 15px; font-variant-numeric: tabular-nums; color: var(--text2); }
+
+  /* ── Timeline ── */
+  .tl-item {
+    display: flex;
+    gap: 12px;
+    padding: 0 0 16px 0;
+    position: relative;
+  }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: 38px;
+    top: 24px;
+    bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+  .tl-item:last-child::before { display: none; }
+  .tl-time {
+    width: 38px;
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--text2);
+    padding-top: 4px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .tl-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+    border: 2px solid var(--bg);
+  }
+  .tl-body { flex: 1; }
+  .tl-name { font-size: 15px; font-weight: 500; }
+  .tl-dur  { font-size: 13px; color: var(--text2); margin-top: 1px; }
+  .tl-body button {
+    background: none; border: none; color: var(--text2);
+    font-size: 12px; cursor: pointer; padding: 2px 0; font-family: inherit;
+  }
+
+  /* ── Plan Page ── */
+  .plan-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .plan-row:last-child { border-bottom: none; }
+  .plan-row label { font-size: 15px; flex: 1; }
+  .plan-row input {
+    width: 72px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 15px;
+    padding: 7px 10px;
+    text-align: right;
+    font-family: inherit;
+    outline: none;
+  }
+  .plan-row input:focus { border-color: var(--accent); }
+  .plan-unit { font-size: 13px; color: var(--text2); width: 16px; }
+
+  .budget-bar {
+    height: 8px;
+    background: var(--bg3);
+    border-radius: 4px;
+    margin: 12px 0 6px;
+    overflow: hidden;
+  }
+  .budget-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+  .budget-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  /* ── Report Page ── */
+  canvas { display: block; }
+  .stat-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { display: flex; align-items: center; gap: 7px; }
+  .stat-val   { text-align: right; font-variant-numeric: tabular-nums; color: var(--text2); min-width: 36px; }
+  .stat-delta { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; min-width: 40px; }
+  .plus  { color: var(--green); }
+  .minus { color: var(--red); }
+
+  /* ── Week Selector ── */
+  .week-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .week-nav span { font-size: 15px; font-weight: 600; }
+  .week-nav button {
+    background: var(--bg3); border: none; color: var(--text);
+    width: 34px; height: 34px; border-radius: 50%;
+    font-size: 18px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+  }
+
+  /* ── Modal / Sheet ── */
+  .sheet-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    z-index: 100; display: none; align-items: flex-end;
+  }
+  .sheet-bg.open { display: flex; }
+  .sheet {
+    background: var(--bg2);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px calc(20px + var(--safe-bot));
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .sheet h3 { font-size: 17px; margin-bottom: 16px; }
+  .sheet input[type=text] {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 15px;
+    padding: 12px 14px;
+    font-family: inherit;
+    outline: none;
+    margin-bottom: 10px;
+  }
+  .sheet input[type=text]:focus { border-color: var(--accent); }
+
+  /* ── Empty State ── */
+  .empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--text2);
+  }
+  .empty .empty-icon { font-size: 40px; margin-bottom: 10px; }
+  .empty p { font-size: 14px; }
+
+  /* ── Report Mode Tabs ── */
+  .rpt-mode-btn {
+    flex: 1; padding: 8px 0; border: none; border-radius: 9px;
+    font-size: 14px; font-weight: 500; font-family: inherit;
+    cursor: pointer; background: transparent; color: var(--text2);
+    transition: background 0.15s, color 0.15s;
+  }
+  .rpt-mode-btn.active { background: var(--bg2); color: var(--text); font-weight: 600; }
+
+  /* ── Utility ── */
+  .row  { display: flex; align-items: center; gap: 10px; }
+  .flex { display: flex; }
+  .mt8  { margin-top: 8px; }
+  .mt14 { margin-top: 14px; }
+  .text-sm   { font-size: 13px; }
+  .text-muted { color: var(--text2); }
+  .text-accent { color: var(--accent2); }
+  .text-green  { color: var(--green); }
+  .text-red    { color: var(--red); }
+  .text-yellow { color: var(--yellow); }
+  .fw600 { font-weight: 600; }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 12px;
+    background: var(--bg3);
+    color: var(--text2);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <div id="header">
+    <h1 id="page-title">记录</h1>
+    <span class="date-tag" id="header-date"></span>
+  </div>
+
+  <!-- Pages -->
+  <div id="pages">
+
+    <!-- ① 记录页 -->
+    <div class="page active" id="page-record">
+
+      <!-- Timer Card -->
+      <div class="card">
+        <div class="timer-display">
+          <div class="timer-category" id="timer-cat-label"></div>
+          <div class="timer-clock" id="timer-clock">00:00:00</div>
+          <!-- Category Picker (shown when not running) -->
+          <div id="cat-picker">
+            <div class="cat-grid" id="cat-grid"></div>
+            <input type="text" id="note-input" placeholder="备注：做了什么？（可选）"
+              style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+              color:var(--text);font-size:14px;padding:10px 14px;font-family:inherit;outline:none;
+              margin-bottom:12px;display:block" autocomplete="off">
+            <button class="btn btn-primary btn-full" id="btn-start" onclick="startTimer()">
+              开始记录
+            </button>
+          </div>
+          <!-- Stop button (shown when running) -->
+          <div id="running-controls" style="display:none">
+            <button class="btn btn-danger btn-full" onclick="stopTimer()">
+              停止记录
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today Overview -->
+      <div class="card">
+        <div class="card-title">今日时间概览</div>
+        <div id="today-overview"></div>
+      </div>
+
+      <!-- Today Sessions -->
+      <div class="card">
+        <div class="card-title">今日 · 已记录</div>
+        <div id="today-summary"></div>
+      </div>
+
+    </div>
+
+    <!-- ② 时间轴页 -->
+    <div class="page" id="page-timeline">
+      <div class="week-nav">
+        <button onclick="tlPrev()">‹</button>
+        <span id="tl-date-label"></span>
+        <button onclick="tlNext()">›</button>
+      </div>
+      <div id="tl-container"></div>
+    </div>
+
+    <!-- ③ 计划页 -->
+    <div class="page" id="page-plan">
+      <div class="week-nav">
+        <button onclick="planPrev()">‹</button>
+        <span id="plan-week-label"></span>
+        <button onclick="planNext()">›</button>
+      </div>
+      <div class="card">
+        <div class="card-title">本周时间预算</div>
+        <div id="budget-display"></div>
+        <div class="budget-bar mt8"><div class="budget-fill" id="budget-fill"></div></div>
+        <div class="budget-label">
+          <span id="budget-used">计划 0h</span>
+          <span id="budget-left">可用 0h</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">各项计划</div>
+        <div id="plan-inputs"></div>
+      </div>
+      <button class="btn btn-ghost btn-full" onclick="savePlan()" style="margin-bottom:14px">保存计划</button>
+    </div>
+
+    <!-- ④ 报告页 -->
+    <div class="page" id="page-report">
+      <!-- 日/周/月 切换 -->
+      <div style="display:flex;background:var(--bg3);border-radius:12px;padding:4px;margin-bottom:16px;gap:2px">
+        <button class="rpt-mode-btn active" data-mode="day"   onclick="setRptMode('day',this)">每日</button>
+        <button class="rpt-mode-btn"        data-mode="week"  onclick="setRptMode('week',this)">每周</button>
+        <button class="rpt-mode-btn"        data-mode="month" onclick="setRptMode('month',this)">每月</button>
+      </div>
+      <div class="week-nav">
+        <button onclick="rptPrev()">‹</button>
+        <span id="rpt-week-label"></span>
+        <button onclick="rptNext()">›</button>
+      </div>
+      <div class="card">
+        <div class="card-title">时间分布</div>
+        <canvas id="pie-canvas" width="300" height="300" style="max-width:220px;margin:0 auto 8px"></canvas>
+        <div id="pie-legend"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">计划 vs 实际</div>
+        <div id="rpt-compare"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">本周总计</div>
+        <div id="rpt-total"></div>
+      </div>
+    </div>
+
+  </div><!-- /pages -->
+
+  <!-- Tab Bar -->
+  <nav id="tabbar">
+    <button class="tab active" onclick="switchTab('record', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
+      </svg>
+      记录
+    </button>
+    <button class="tab" onclick="switchTab('timeline', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+      时间轴
+    </button>
+    <button class="tab" onclick="switchTab('plan', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      计划
+    </button>
+    <button class="tab" onclick="switchTab('report', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      报告
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<script>
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+
+// ══════════════════════════════════════════
+//  数据层
+// ══════════════════════════════════════════
+
+const CATEGORIES = [
+  { name:'科研', icon:'🔬', color:'#6c63ff' },
+  { name:'公司', icon:'💼', color:'#34d399' },
+  { name:'学习', icon:'📖', color:'#a78bfa' },
+  { name:'运动', icon:'🏃', color:'#fb923c' },
+  { name:'社交', icon:'🤝', color:'#f472b6' },
+  { name:'生活', icon:'🏠', color:'#fbbf24' },
+  { name:'通勤', icon:'🚇', color:'#94a3b8' },
+  { name:'睡觉', icon:'😴', color:'#475569' },
+  { name:'其他', icon:'⬜', color:'#4b5563' },
+];
+
+function getCatMeta(name) {
+  return CATEGORIES.find(c => c.name === name) || { name, icon:'⬜', color:'#4b5563' };
+}
+
+// ── LocalStorage helpers ──
+function loadSessions() {
+  try { return JSON.parse(localStorage.getItem('to_sessions') || '[]'); } catch{ return []; }
+}
+function saveSessions(s) { localStorage.setItem('to_sessions', JSON.stringify(s)); }
+
+function loadTimer() {
+  try { return JSON.parse(localStorage.getItem('to_timer') || 'null'); } catch{ return null; }
+}
+function saveTimer(t) {
+  if (t) localStorage.setItem('to_timer', JSON.stringify(t));
+  else localStorage.removeItem('to_timer');
+}
+
+function loadPlans() {
+  try { return JSON.parse(localStorage.getItem('to_plans') || '{}'); } catch{ return {}; }
+}
+function savePlans(p) { localStorage.setItem('to_plans', JSON.stringify(p)); }
+
+// ── Week / Date utils ──
+function dateKey(d) {
+  const dt = d || new Date();
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+function weekKey(d) {
+  const dt = d ? new Date(d) : new Date();
+  // ISO week: Mon=start
+  const day = (dt.getDay() + 6) % 7;
+  const mon = new Date(dt); mon.setDate(dt.getDate() - day);
+  return dateKey(mon);
+}
+function weekLabel(wk) {
+  const mon = new Date(wk);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+  return `${fmt(mon)} – ${fmt(sun)}`;
+}
+function addWeeks(wk, n) {
+  const d = new Date(wk); d.setDate(d.getDate() + n*7); return dateKey(d);
+}
+function addDays(dk, n) {
+  const d = new Date(dk); d.setDate(d.getDate() + n); return dateKey(d);
+}
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function fmtDur(sec) {
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  if (h > 0) return `${h}h${String(m).padStart(2,'0')}m`;
+  if (m > 0) return `${m}m${String(s).padStart(2,'0')}s`;
+  return `${s}s`;
+}
+function fmtDurH(sec) {
+  const h = (sec/3600).toFixed(1);
+  return `${h}h`;
+}
+
+// ══════════════════════════════════════════
+//  计时器
+// ══════════════════════════════════════════
+
+let timerInterval = null;
+let selectedCat = CATEGORIES[0].name;
+
+function buildCatGrid() {
+  const grid = document.getElementById('cat-grid');
+  grid.innerHTML = '';
+  CATEGORIES.forEach(c => {
+    const chip = document.createElement('div');
+    chip.className = 'cat-chip' + (c.name === selectedCat ? ' selected' : '');
+    chip.innerHTML = `<span class="cat-icon">${c.icon}</span>${c.name}`;
+    chip.onclick = () => { selectedCat = c.name; buildCatGrid(); };
+    grid.appendChild(chip);
+  });
+}
+
+function startTimer() {
+  const note = (document.getElementById('note-input').value || '').trim();
+  const t = { category: selectedCat, note, startTime: new Date().toISOString() };
+  saveTimer(t);
+  showRunning(t);
+}
+
+function stopTimer() {
+  const t = loadTimer();
+  if (!t) return;
+  const endTime = new Date().toISOString();
+  const dur = Math.round((new Date(endTime) - new Date(t.startTime)) / 1000);
+  if (dur < 5) { saveTimer(null); showIdle(); return; }
+
+  const sessions = loadSessions();
+  sessions.push({ id: Date.now(), category: t.category, note: t.note||'', startTime: t.startTime, endTime, duration: dur });
+  saveSessions(sessions);
+  saveTimer(null);
+  showIdle();
+  renderTodayOverview();
+  renderTodaySummary();
+}
+
+function showRunning(t) {
+  document.getElementById('cat-picker').style.display = 'none';
+  document.getElementById('running-controls').style.display = '';
+  const label = document.getElementById('timer-cat-label');
+  const clock = document.getElementById('timer-clock');
+  const meta = getCatMeta(t.category);
+  label.textContent = `${meta.icon} ${t.category}${t.note ? ' · ' + t.note : ''}`;
+  clock.classList.add('running');
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const sec = Math.round((Date.now() - new Date(t.startTime)) / 1000);
+    const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+    clock.textContent =
+      `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }, 1000);
+}
+
+function showIdle() {
+  clearInterval(timerInterval);
+  document.getElementById('cat-picker').style.display = '';
+  document.getElementById('running-controls').style.display = 'none';
+  document.getElementById('timer-cat-label').textContent = '';
+  document.getElementById('timer-clock').textContent = '00:00:00';
+  document.getElementById('timer-clock').classList.remove('running');
+  document.getElementById('note-input').value = '';
+  buildCatGrid();
+}
+
+// ══════════════════════════════════════════
+//  今日概览 + 汇总
+// ══════════════════════════════════════════
+
+function renderTodayOverview() {
+  const now     = new Date();
+  const today   = dateKey();
+  const all     = loadSessions();
+
+  // ── 今日 ──
+  const todaySessions = all.filter(s => s.startTime.startsWith(today));
+  const todayTracked  = todaySessions.reduce((a,s) => a + s.duration, 0);
+  const startOfDay    = new Date(today + 'T00:00:00');
+  const elapsed       = Math.round((now - startOfDay) / 1000);
+  const todayFree     = Math.max(0, elapsed - todayTracked);
+  const todayLeft     = Math.max(0, 86400 - elapsed);
+
+  // ── 本周 ──
+  const wk       = weekKey();
+  const wkStart  = new Date(wk);
+  const wkEnd    = new Date(wk); wkEnd.setDate(wkEnd.getDate() + 7);
+  const wkSessions = all.filter(s => { const t=new Date(s.startTime); return t>=wkStart && t<wkEnd; });
+  const wkTracked  = wkSessions.reduce((a,s) => a + s.duration, 0);
+  const wkDays     = Math.min(7, Math.ceil((now - wkStart) / 86400000));
+
+  // ── 本月 ──
+  const mo         = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const moSessions = all.filter(s => s.startTime.startsWith(mo));
+  const moTracked  = moSessions.reduce((a,s) => a + s.duration, 0);
+  const moDays     = now.getDate();
+
+  const el = document.getElementById('today-overview');
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:var(--bg3);border-radius:12px;padding:12px 10px;text-align:center">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">今日已过</div>
+        <div style="font-size:18px;font-weight:700;color:var(--text)">${fmtDurShort(elapsed)}</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:12px;padding:12px 10px;text-align:center">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">今日已记录</div>
+        <div style="font-size:18px;font-weight:700;color:var(--accent2)">${fmtDurShort(todayTracked)}</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:12px;padding:12px 10px;text-align:center">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">今日剩余</div>
+        <div style="font-size:18px;font-weight:700;color:var(--green)">${fmtDurShort(todayLeft)}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:var(--bg3);border-radius:12px;padding:12px 14px">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:6px">本周记录</div>
+        <div style="font-size:22px;font-weight:700;color:var(--text)">${fmtDurShort(wkTracked)}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">共 ${wkDays} 天</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:12px;padding:12px 14px">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:6px">本月记录</div>
+        <div style="font-size:22px;font-weight:700;color:var(--text)">${fmtDurShort(moTracked)}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">共 ${moDays} 天</div>
+      </div>
+    </div>
+    <div class="summary-row" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <span class="summary-label text-muted text-sm">今日未解释时间</span>
+      <span class="summary-value text-yellow fw600">${fmtDur(todayFree)}</span>
+    </div>`;
+}
+
+// 短格式：只到小时/分钟
+function fmtDurShort(sec) {
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60);
+  if (h >= 1) return `${h}h${m>0?m+'m':''}`;
+  return `${m}m`;
+}
+
+function renderTodaySummary() {
+  const today = dateKey();
+  const sessions = loadSessions().filter(s => s.startTime.startsWith(today));
+  const totals = {};
+  sessions.forEach(s => { totals[s.category] = (totals[s.category]||0) + s.duration; });
+
+  const el = document.getElementById('today-summary');
+  if (!sessions.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🕐</div><p>今天还没有记录</p></div>';
+    return;
+  }
+
+  // 按分类汇总
+  const sorted = Object.entries(totals).sort((a,b) => b[1]-a[1]);
+  el.innerHTML = sorted.map(([cat, sec]) => {
+    const m = getCatMeta(cat);
+    // 列出该分类下的备注
+    const notes = sessions.filter(s=>s.category===cat && s.note).map(s=>s.note);
+    const noteStr = notes.length ? `<div style="font-size:12px;color:var(--text2);margin-top:2px">${[...new Set(notes)].join(' · ')}</div>` : '';
+    return `<div class="summary-row" style="flex-direction:column;align-items:flex-start;gap:0">
+      <div style="display:flex;justify-content:space-between;width:100%">
+        <span class="summary-label">
+          <span class="dot" style="background:${m.color}"></span>${m.icon} ${cat}
+        </span>
+        <span class="summary-value">${fmtDur(sec)}</span>
+      </div>
+      ${noteStr}
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+//  时间轴页
+// ══════════════════════════════════════════
+
+let tlDate = dateKey();
+
+function tlPrev() { tlDate = addDays(tlDate, -1); renderTimeline(); }
+function tlNext() { tlDate = addDays(tlDate, +1); renderTimeline(); }
+
+function renderTimeline() {
+  const d = new Date(tlDate);
+  const days = ['日','一','二','三','四','五','六'];
+  document.getElementById('tl-date-label').textContent =
+    `${d.getMonth()+1}月${d.getDate()}日 周${days[d.getDay()]}`;
+
+  const sessions = loadSessions()
+    .filter(s => s.startTime.startsWith(tlDate))
+    .sort((a,b) => new Date(a.startTime)-new Date(b.startTime));
+
+  const el = document.getElementById('tl-container');
+  if (!sessions.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><p>这天没有记录</p></div>';
+    return;
+  }
+
+  el.innerHTML = sessions.map(s => {
+    const m = getCatMeta(s.category);
+    return `<div class="tl-item">
+      <div class="tl-time">${fmtTime(s.startTime)}</div>
+      <div class="tl-dot" style="background:${m.color}"></div>
+      <div class="tl-body">
+        <div class="tl-name">${m.icon} ${s.category}${s.note ? ' <span style="color:var(--text2);font-size:13px">· ' + s.note + '</span>' : ''}</div>
+        <div class="tl-dur">${fmtDur(s.duration)} · 结束 ${fmtTime(s.endTime)}</div>
+        <button onclick="deleteSession(${s.id})">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteSession(id) {
+  if (!confirm('删除这条记录？')) return;
+  saveSessions(loadSessions().filter(s => s.id !== id));
+  renderTimeline();
+  renderTodayOverview();
+  renderTodaySummary();
+}
+
+// ══════════════════════════════════════════
+//  计划页
+// ══════════════════════════════════════════
+
+let planWeek = weekKey();
+
+function planPrev() { planWeek = addWeeks(planWeek, -1); renderPlan(); }
+function planNext() { planWeek = addWeeks(planWeek, +1); renderPlan(); }
+
+function renderPlan() {
+  document.getElementById('plan-week-label').textContent = weekLabel(planWeek);
+  const plans = loadPlans();
+  const wp = plans[planWeek] || {};
+
+  // 计算本周可用时间（168h - 睡眠49h = 119h 默认）
+  const totalH = 168, sleepH = 49;
+  const available = totalH - sleepH;
+
+  let totalPlanned = 0;
+  const inputs = document.getElementById('plan-inputs');
+  inputs.innerHTML = CATEGORIES.filter(c => c.name !== '其他' && c.name !== '通勤').map(c => {
+    const val = wp[c.name] || '';
+    totalPlanned += Number(val) || 0;
+    return `<div class="plan-row">
+      <label>${c.icon} ${c.name}</label>
+      <input type="number" min="0" max="100" step="0.5" value="${val}"
+        data-cat="${c.name}" oninput="onPlanInput()" placeholder="0">
+      <span class="plan-unit">h</span>
+    </div>`;
+  }).join('');
+
+  updateBudget(totalPlanned, available);
+}
+
+function onPlanInput() {
+  let total = 0;
+  document.querySelectorAll('#plan-inputs input').forEach(inp => {
+    total += Number(inp.value) || 0;
+  });
+  const available = 168 - 49;
+  updateBudget(total, available);
+}
+
+function updateBudget(planned, available) {
+  const pct = Math.min(planned / available * 100, 100);
+  const fill = document.getElementById('budget-fill');
+  const overload = planned > available;
+  fill.style.width = pct + '%';
+  fill.style.background = overload ? '#f87171' : planned > available*0.85 ? '#fbbf24' : '#34d399';
+  document.getElementById('budget-used').textContent = `计划 ${planned.toFixed(1)}h`;
+  document.getElementById('budget-left').textContent =
+    overload ? `⚠️ 超载 ${(planned-available).toFixed(1)}h` : `可用 ${(available-planned).toFixed(1)}h`;
+}
+
+function savePlan() {
+  const plans = loadPlans();
+  const wp = {};
+  document.querySelectorAll('#plan-inputs input').forEach(inp => {
+    const v = Number(inp.value);
+    if (v > 0) wp[inp.dataset.cat] = v;
+  });
+  plans[planWeek] = wp;
+  savePlans(plans);
+  const btn = event.target;
+  btn.textContent = '已保存 ✓';
+  btn.style.color = 'var(--green)';
+  setTimeout(() => { btn.textContent = '保存计划'; btn.style.color = ''; }, 1500);
+}
+
+// ══════════════════════════════════════════
+//  报告页
+// ══════════════════════════════════════════
+
+let rptMode   = 'day';           // 'day' | 'week' | 'month'
+let rptCursor = dateKey();       // 当前日期/周首/月首
+
+function setRptMode(mode, el) {
+  rptMode   = mode;
+  rptCursor = mode === 'month' ? dateKey().slice(0,7) + '-01'
+            : mode === 'week'  ? weekKey()
+            : dateKey();
+  document.querySelectorAll('.rpt-mode-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderReport();
+}
+
+function rptPrev() {
+  if (rptMode === 'day')   rptCursor = addDays(rptCursor, -1);
+  if (rptMode === 'week')  rptCursor = addWeeks(rptCursor, -1);
+  if (rptMode === 'month') rptCursor = addMonths(rptCursor, -1);
+  renderReport();
+}
+function rptNext() {
+  if (rptMode === 'day')   rptCursor = addDays(rptCursor, +1);
+  if (rptMode === 'week')  rptCursor = addWeeks(rptCursor, +1);
+  if (rptMode === 'month') rptCursor = addMonths(rptCursor, +1);
+  renderReport();
+}
+
+function addMonths(dk, n) {
+  const d = new Date(dk); d.setMonth(d.getMonth() + n); return dateKey(d);
+}
+
+// 兼容旧变量名（switchTab 里用到）
+let rptWeek = dateKey();
+
+function getWeekSessions(wk) {
+  const mon = new Date(wk);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 7);
+  return loadSessions().filter(s => {
+    const t = new Date(s.startTime);
+    return t >= mon && t < sun;
+  });
+}
+
+function renderReport() {
+  const all = loadSessions();
+  let sessions, label, planKey, daysN;
+
+  if (rptMode === 'day') {
+    sessions = all.filter(s => s.startTime.startsWith(rptCursor));
+    const d = new Date(rptCursor);
+    const days = ['日','一','二','三','四','五','六'];
+    label = `${d.getMonth()+1}月${d.getDate()}日 周${days[d.getDay()]}`;
+    planKey = null; daysN = 1;
+
+  } else if (rptMode === 'week') {
+    const wkStart = new Date(rptCursor);
+    const wkEnd   = new Date(rptCursor); wkEnd.setDate(wkEnd.getDate()+7);
+    sessions = all.filter(s => { const t=new Date(s.startTime); return t>=wkStart&&t<wkEnd; });
+    label = weekLabel(rptCursor); planKey = rptCursor;
+    daysN = rptCursor===weekKey()
+      ? Math.min(7, Math.ceil((Date.now()-wkStart.getTime())/86400000)) : 7;
+
+  } else {
+    const mo = rptCursor.slice(0,7);
+    sessions = all.filter(s => s.startTime.startsWith(mo));
+    const [yr,mn] = mo.split('-').map(Number);
+    label = `${yr}年${mn}月`; planKey = null;
+    const now = new Date();
+    daysN = (yr===now.getFullYear()&&mn===now.getMonth()+1)
+      ? now.getDate() : new Date(yr,mn,0).getDate();
+  }
+
+  document.getElementById('rpt-week-label').textContent = label;
+
+  // 汇总
+  const actual = {};
+  sessions.forEach(s => { actual[s.category] = (actual[s.category]||0) + s.duration; });
+  const plans       = planKey ? (loadPlans()[planKey] || {}) : {};
+  const allCats     = [...new Set([...Object.keys(plans), ...Object.keys(actual)])];
+  const totalActSec = Object.values(actual).reduce((a,b)=>a+b, 0);
+  const totalPlanH  = Object.values(plans).reduce((a,b)=>a+b, 0);
+  const showPlan    = !!planKey;
+
+  drawPie(actual);
+
+  const compareEl = document.getElementById('rpt-compare');
+  if (!allCats.length) {
+    compareEl.innerHTML = '<div class="empty"><p>暂无数据</p></div>';
+  } else {
+    const rows = allCats.sort((a,b)=>(actual[b]||0)-(actual[a]||0)).map(cat => {
+      const m = getCatMeta(cat);
+      const actH = (actual[cat]||0)/3600;
+      const planH = plans[cat]||0;
+      const dH = actH - planH;
+      const delta = showPlan && planH > 0
+        ? (dH>=0 ? `<span class="stat-delta plus">+${dH.toFixed(1)}h</span>`
+                 : `<span class="stat-delta minus">${dH.toFixed(1)}h</span>`)
+        : `<span class="stat-delta text-muted">—</span>`;
+      return `<div class="stat-row">
+        <span class="stat-label"><span class="dot" style="background:${m.color}"></span>${m.icon} ${cat}</span>
+        <span class="stat-val">${showPlan && planH>0 ? planH.toFixed(1)+'h' : '—'}</span>
+        <span class="stat-val">${actH>0 ? actH.toFixed(1)+'h' : '—'}</span>
+        ${delta}
+      </div>`;
+    });
+    compareEl.innerHTML = `
+      <div class="stat-row" style="color:var(--text2);font-size:12px">
+        <span>分类</span>
+        <span class="stat-val">${showPlan ? '计划' : '—'}</span>
+        <span class="stat-val">实际</span>
+        <span class="stat-delta">偏差</span>
+      </div>${rows.join('')}`;
+  }
+
+  document.getElementById('rpt-total').innerHTML = `
+    <div class="summary-row">
+      <span class="summary-label fw600">已记录总时间</span>
+      <span class="summary-value fw600 text-accent">${fmtDurH(totalActSec)}</span>
+    </div>
+    ${showPlan ? `<div class="summary-row">
+      <span class="summary-label">计划总时间</span>
+      <span class="summary-value">${totalPlanH>0 ? totalPlanH.toFixed(1)+'h' : '未设计划'}</span>
+    </div>` : ''}
+    <div class="summary-row">
+      <span class="summary-label text-muted">统计天数</span>
+      <span class="summary-value">${daysN} 天</span>
+    </div>`;
+}
+
+// ── 纯 Canvas 饼图 ──
+function drawPie(actual) {
+  const canvas = document.getElementById('pie-canvas');
+  const ctx    = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2, r = Math.min(W,H)/2 - 10;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const entries = Object.entries(actual).filter(([,v])=>v>0)
+    .sort((a,b)=>b[1]-a[1]);
+  const total = entries.reduce((s,[,v])=>s+v, 0);
+
+  if (!total) {
+    ctx.fillStyle = '#2e2e45';
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#9090b0';
+    ctx.font = '14px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('暂无数据', cx, cy);
+    document.getElementById('pie-legend').innerHTML = '';
+    return;
+  }
+
+  let angle = -Math.PI / 2;
+  const slices = [];
+  entries.forEach(([cat, sec]) => {
+    const sweep = (sec / total) * Math.PI * 2;
+    const m = getCatMeta(cat);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, angle, angle + sweep);
+    ctx.closePath();
+    ctx.fillStyle = m.color;
+    ctx.fill();
+    slices.push({ cat, sec, sweep, angle, color: m.color });
+    angle += sweep;
+  });
+
+  // 中心圆 donut hole
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.45, 0, Math.PI*2);
+  ctx.fillStyle = '#0f0f13';
+  ctx.fill();
+
+  // 中心文字
+  ctx.fillStyle = '#e8e8f0';
+  ctx.font = `bold 18px -apple-system, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(fmtDurH(total), cx, cy);
+
+  // 图例
+  document.getElementById('pie-legend').innerHTML = slices.map(s => {
+    const pct = (s.sec/total*100).toFixed(0);
+    const m = getCatMeta(s.cat);
+    return `<div class="summary-row">
+      <span class="summary-label">
+        <span class="dot" style="background:${s.color}"></span>${m.icon} ${s.cat}
+      </span>
+      <span class="summary-value">${fmtDurH(s.sec)} · ${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+//  导航 & 初始化
+// ══════════════════════════════════════════
+
+const PAGE_TITLES = { record:'记录', timeline:'时间轴', plan:'计划', report:'报告' };
+
+function switchTab(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('page-title').textContent = PAGE_TITLES[name];
+  if (name === 'timeline') { tlDate = dateKey(); renderTimeline(); }
+  if (name === 'plan')     { planWeek = weekKey(); renderPlan(); }
+  if (name === 'report')   { rptCursor = rptMode==='month' ? dateKey().slice(0,7)+'-01' : rptMode==='week' ? weekKey() : dateKey(); renderReport(); }
+}
+
+function updateHeaderDate() {
+  const now = new Date();
+  const days = ['日','一','二','三','四','五','六'];
+  document.getElementById('header-date').textContent =
+    `${now.getMonth()+1}月${now.getDate()}日 周${days[now.getDay()]}`;
+}
+
+// ── 启动 ──
+(function init() {
+  updateHeaderDate();
+  setInterval(updateHeaderDate, 60000);
+  setInterval(() => { renderTodayOverview(); renderTodaySummary(); }, 30000);
+
+  buildCatGrid();
+  const running = loadTimer();
+  if (running) showRunning(running);
+  else showIdle();
+
+  renderTodayOverview();
+  renderTodaySummary();
+  setInterval(() => { renderTodayOverview(); renderTodaySummary(); }, 30000);
+
+  rptCursor = dateKey();
+})();
+</script>
+</body>
+</html>
